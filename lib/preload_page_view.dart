@@ -80,8 +80,8 @@ class PreloadPageController extends ScrollController {
         positions.length == 1,
         'The page property cannot be read when multiple PageViews are attached to '
         'the same PageController.',);
-    final _PagePosition position = this.position;
-    return position.page;
+    final _PagePosition? position = this.position as _PagePosition?;
+    return position?.page ?? initialPage.toDouble();
   }
 
   /// Animates the controlled [PreloadPageView] from the current page to the given page.
@@ -92,10 +92,13 @@ class PreloadPageController extends ScrollController {
   /// The `duration` and `curve` arguments must not be null.
   Future<void> animateToPage(
     int page, {
-    @required Duration duration,
-    @required Curve curve,
+    required Duration duration,
+    required Curve curve,
   }) {
-    final _PagePosition position = this.position;
+    final _PagePosition? position = this.position as _PagePosition?;
+    if (position == null) {
+      return Future.value(); // Or handle the null case appropriately
+    }
     return position.animateTo(
       position.getPixelsFromPage(page.toDouble()),
       duration: duration,
@@ -108,8 +111,8 @@ class PreloadPageController extends ScrollController {
   /// Jumps the page position from its current value to the given value,
   /// without animation, and without checking if the new value is in range.
   void jumpToPage(int page) {
-    final _PagePosition position = this.position;
-    position.jumpTo(position.getPixelsFromPage(page.toDouble()));
+    final _PagePosition? position = this.position as _PagePosition?;
+    position?.jumpTo(position.getPixelsFromPage(page.toDouble()));
   }
 
   /// Animates the controlled [PreloadPageView] to the next page.
@@ -118,8 +121,8 @@ class PreloadPageController extends ScrollController {
   /// The returned [Future] resolves when the animation completes.
   ///
   /// The `duration` and `curve` arguments must not be null.
-  Future<void> nextPage({@required Duration duration, @required Curve curve}) {
-    return animateToPage(page.round() + 1, duration: duration, curve: curve);
+  Future<void> nextPage({required Duration duration, required Curve curve}) {
+    return animateToPage((page).round() + 1, duration: duration, curve: curve);
   }
 
   /// Animates the controlled [PreloadPageView] to the previous page.
@@ -129,13 +132,13 @@ class PreloadPageController extends ScrollController {
   ///
   /// The `duration` and `curve` arguments must not be null.
   Future<void> previousPage(
-      {@required Duration duration, @required Curve curve}) {
-    return animateToPage(page.round() - 1, duration: duration, curve: curve);
+      {required Duration duration, required Curve curve}) {
+    return animateToPage((page).round() - 1, duration: duration, curve: curve);
   }
 
   @override
   ScrollPosition createScrollPosition(ScrollPhysics physics,
-      ScrollContext context, ScrollPosition oldPosition) {
+      ScrollContext context, ScrollPosition? oldPosition) {
     return _PagePosition(
       physics: physics,
       context: context,
@@ -149,8 +152,8 @@ class PreloadPageController extends ScrollController {
   @override
   void attach(ScrollPosition position) {
     super.attach(position);
-    final _PagePosition pagePosition = position;
-    pagePosition.viewportFraction = viewportFraction;
+    final _PagePosition? pagePosition = position as _PagePosition?;
+    pagePosition?.viewportFraction = viewportFraction;
   }
 }
 
@@ -161,12 +164,12 @@ class PreloadPageController extends ScrollController {
 class PageMetrics extends FixedScrollMetrics {
   /// Creates an immutable snapshot of values associated with a [PreloadPageView].
   PageMetrics({
-    @required double minScrollExtent,
-    @required double maxScrollExtent,
-    @required double pixels,
-    @required double viewportDimension,
-    @required AxisDirection axisDirection,
-    @required this.viewportFraction,
+    required double minScrollExtent,
+    required double maxScrollExtent,
+    required double pixels,
+    required double viewportDimension,
+    required AxisDirection axisDirection,
+    required this.viewportFraction,
   }) : super(
           minScrollExtent: minScrollExtent,
           maxScrollExtent: maxScrollExtent,
@@ -177,12 +180,12 @@ class PageMetrics extends FixedScrollMetrics {
 
   @override
   PageMetrics copyWith({
-    double minScrollExtent,
-    double maxScrollExtent,
-    double pixels,
-    double viewportDimension,
-    AxisDirection axisDirection,
-    double viewportFraction,
+    double? minScrollExtent,
+    double? maxScrollExtent,
+    double? pixels,
+    double? viewportDimension,
+    AxisDirection? axisDirection,
+    double? viewportFraction,
   }) {
     return PageMetrics(
       minScrollExtent: minScrollExtent ?? this.minScrollExtent,
@@ -209,12 +212,12 @@ class PageMetrics extends FixedScrollMetrics {
 class _PagePosition extends ScrollPositionWithSingleContext
     implements PageMetrics {
   _PagePosition({
-    ScrollPhysics physics,
-    ScrollContext context,
+    required ScrollPhysics physics,
+    required ScrollContext context,
     this.initialPage = 0,
-    bool keepPage = true,
-    double viewportFraction = 1.0,
-    ScrollPosition oldPosition,
+    this.keepPage = true,
+    this.viewportFraction = 1.0,
+    ScrollPosition? oldPosition,
   })  : assert(initialPage != null),
         assert(keepPage != null),
         assert(viewportFraction != null),
@@ -238,7 +241,7 @@ class _PagePosition extends ScrollPositionWithSingleContext
 
   set viewportFraction(double value) {
     if (_viewportFraction == value) return;
-    final double oldPage = page;
+    final double? oldPage = page;
     _viewportFraction = value;
     if (oldPage != null) forcePixels(getPixelsFromPage(oldPage));
   }
@@ -253,7 +256,7 @@ class _PagePosition extends ScrollPositionWithSingleContext
   }
 
   @override
-  double get page => pixels == null
+  double? get page => pixels == null
       ? null
       : getPageFromPixels(
           pixels.clamp(minScrollExtent, maxScrollExtent), viewportDimension);
@@ -267,9 +270,9 @@ class _PagePosition extends ScrollPositionWithSingleContext
   @override
   void restoreScrollOffset() {
     if (pixels == null) {
-      final double value = PageStorage.of(context.storageContext)
+      final Object? value = PageStorage.of(context.storageContext)
           ?.readState(context.storageContext);
-      if (value != null) _pageToUseOnStartup = value;
+      if (value is double) _pageToUseOnStartup = value;
     }
   }
 
@@ -291,12 +294,12 @@ class _PagePosition extends ScrollPositionWithSingleContext
 
   @override
   PageMetrics copyWith({
-    double minScrollExtent,
-    double maxScrollExtent,
-    double pixels,
-    double viewportDimension,
-    AxisDirection axisDirection,
-    double viewportFraction,
+    double? minScrollExtent,
+    double? maxScrollExtent,
+    double? pixels,
+    double? viewportDimension,
+    AxisDirection? axisDirection,
+    double? viewportFraction,
   }) {
     return PageMetrics(
       minScrollExtent: minScrollExtent ?? this.minScrollExtent,
@@ -320,15 +323,15 @@ class _PagePosition extends ScrollPositionWithSingleContext
 ///  * [PreloadPageView.physics], which can override the physics used by a page view.
 class PageScrollPhysics extends ScrollPhysics {
   /// Creates physics for a [PreloadPageView].
-  const PageScrollPhysics({ScrollPhysics parent}) : super(parent: parent);
+  const PageScrollPhysics({ScrollPhysics? parent}) : super(parent: parent);
 
   @override
-  PageScrollPhysics applyTo(ScrollPhysics ancestor) {
+  PageScrollPhysics applyTo(ScrollPhysics? ancestor) {
     return PageScrollPhysics(parent: buildParent(ancestor));
   }
 
   double _getPage(ScrollPosition position) {
-    if (position is _PagePosition) return position.page;
+    if (position is _PagePosition) return position.page ?? 0.0;
     return position.pixels / position.viewportDimension;
   }
 
@@ -347,7 +350,7 @@ class PageScrollPhysics extends ScrollPhysics {
   }
 
   @override
-  Simulation createBallisticSimulation(
+  Simulation? createBallisticSimulation(
       ScrollMetrics position, double velocity) {
     // If we're out of range and not headed back in range, defer to the parent
     // ballistics, which should put us back in range at a page boundary.
@@ -404,10 +407,10 @@ class PreloadPageView extends StatefulWidget {
   /// child that could possibly be displayed in the page view, instead of just
   /// those children that are actually visible.
   PreloadPageView({
-    Key key,
+    Key? key,
     this.scrollDirection = Axis.horizontal,
     this.reverse = false,
-    PreloadPageController controller,
+    PreloadPageController? controller,
     this.physics,
     this.pageSnapping = true,
     this.onPageChanged,
@@ -421,46 +424,27 @@ class PreloadPageView extends StatefulWidget {
   /// created on demand.
   ///
   /// This constructor is appropriate for page views with a large (or infinite)
-  /// number of children because the builder is called only for those children
-  /// that are actually visible.
+  /// number of children because the builder only constructs those children that
+  /// are actually visible.
   ///
-  /// Providing a non-null [itemCount] lets the [PreloadPageView] compute the maximum
-  /// scroll extent.
+  /// Providing a non-null [itemCount] improves the ability of the [PreloadPageView] to
+  /// estimate the maximum scroll extent.
   ///
-  /// [itemBuilder] will be called only with indices greater than or equal to
-  /// zero and less than [itemCount].
-  ///
-  /// You can add [preloadPagesCount] for PreloadPageView if you want preload multiple pages
+  /// [itemBuilder] must not be null.
   PreloadPageView.builder({
-    Key key,
+    Key? key,
     this.scrollDirection = Axis.horizontal,
     this.reverse = false,
-    PreloadPageController controller,
+    PreloadPageController? controller,
     this.physics,
     this.pageSnapping = true,
     this.onPageChanged,
-    @required IndexedWidgetBuilder itemBuilder,
-    int itemCount,
+    required IndexedWidgetBuilder itemBuilder,
+    int? itemCount,
     this.preloadPagesCount = 1,
   })  : controller = controller ?? _defaultPageController,
-        childrenDelegate =
-            SliverChildBuilderDelegate(itemBuilder, childCount: itemCount),
-        super(key: key);
-
-  /// Creates a scrollable list that works page by page with a custom child
-  /// model.
-  PreloadPageView.custom({
-    Key key,
-    this.scrollDirection = Axis.horizontal,
-    this.reverse = false,
-    PreloadPageController controller,
-    this.physics,
-    this.pageSnapping = true,
-    this.onPageChanged,
-    @required this.childrenDelegate,
-    this.preloadPagesCount = 1,
-  })  : assert(childrenDelegate != null),
-        controller = controller ?? _defaultPageController,
+        childrenDelegate = SliverChildBuilderDelegate(itemBuilder,
+            childCount: itemCount),
         super(key: key);
 
   /// The axis along which the page view scrolls.
@@ -468,163 +452,20 @@ class PreloadPageView extends StatefulWidget {
   /// Defaults to [Axis.horizontal].
   final Axis scrollDirection;
 
-  /// Whether the page view scrolls in the reading direction.
-  ///
-  /// For example, if the reading direction is left-to-right and
-  /// [scrollDirection] is [Axis.horizontal], then the page view scrolls from
-  /// left to right when [reverse] is false and from right to left when
-  /// [reverse] is true.
-  ///
-  /// Similarly, if [scrollDirection] is [Axis.vertical], then the page view
-  /// scrolls from top to bottom when [reverse] is false and from bottom to top
-  /// when [reverse] is true.
+  /// Whether to reverse the order of items.
   ///
   /// Defaults to false.
   final bool reverse;
 
   /// An object that can be used to control the position to which this page
   /// view is scrolled.
-  final PreloadPageController controller;
+  final PreloadPageController? controller;
 
   /// How the page view should respond to user input.
   ///
   /// For example, determines how the page view continues to animate after the
   /// user stops dragging the page view.
   ///
-  /// The physics are modified to snap to page boundaries using
-  /// [PageScrollPhysics] prior to being used.
-  ///
-  /// Defaults to matching platform conventions.
-  final ScrollPhysics physics;
-
-  /// Set to false to disable page snapping, useful for custom scroll behavior.
-  final bool pageSnapping;
-
-  /// Called whenever the page in the center of the viewport changes.
-  final ValueChanged<int> onPageChanged;
-
-  /// A delegate that provides the children for the [PreloadPageView].
-  ///
-  /// The [PreloadPageView.custom] constructor lets you specify this delegate
-  /// explicitly. The [PreloadPageView] and [PreloadPageView.builder] constructors create a
-  /// [childrenDelegate] that wraps the given [List] and [IndexedWidgetBuilder],
-  /// respectively.
-  final SliverChildDelegate childrenDelegate;
-
-  /// An integer value that determines number pages that will be preloaded.
-  ///
-  /// [preloadPagesCount] value start from 0, default 1
-  final int preloadPagesCount;
-
-  @override
-  _PreloadPageViewState createState() =>
-      _PreloadPageViewState(preloadPagesCount);
-}
-
-class _PreloadPageViewState extends State<PreloadPageView> {
-  int _lastReportedPage = 0;
-  int _preloadPagesCount = 1;
-
-  _PreloadPageViewState(int preloadPagesCount) {
-    _validatePreloadPagesCount(preloadPagesCount);
-    this._preloadPagesCount = preloadPagesCount;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _lastReportedPage = widget.controller.initialPage;
-  }
-
-  void _validatePreloadPagesCount(int preloadPagesCount) {
-    if (preloadPagesCount == null) {
-      throw 'preloadPagesCount cannot be null!';
-    }
-
-    if (preloadPagesCount < 0) {
-      throw 'preloadPagesCount cannot be less than 0. Actual value: $preloadPagesCount';
-    }
-  }
-
-  AxisDirection _getDirection(BuildContext context) {
-    switch (widget.scrollDirection) {
-      case Axis.horizontal:
-        assert(debugCheckHasDirectionality(context));
-        final TextDirection textDirection = Directionality.of(context);
-        final AxisDirection axisDirection =
-            textDirectionToAxisDirection(textDirection);
-        return widget.reverse
-            ? flipAxisDirection(axisDirection)
-            : axisDirection;
-      case Axis.vertical:
-        return widget.reverse ? AxisDirection.up : AxisDirection.down;
-    }
-    return null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final AxisDirection axisDirection = _getDirection(context);
-    final ScrollPhysics physics = widget.pageSnapping
-        ? _kPagePhysics.applyTo(widget.physics)
-        : widget.physics;
-
-    return NotificationListener<ScrollNotification>(
-      onNotification: (ScrollNotification notification) {
-        if (notification.depth == 0 &&
-            widget.onPageChanged != null &&
-            notification is ScrollUpdateNotification) {
-          final PageMetrics metrics = notification.metrics;
-          final int currentPage = metrics.page.round();
-          if (currentPage != _lastReportedPage) {
-            _lastReportedPage = currentPage;
-            widget.onPageChanged(currentPage);
-          }
-        }
-        return false;
-      },
-      child: Scrollable(
-        axisDirection: axisDirection,
-        controller: widget.controller,
-        physics: physics,
-        viewportBuilder: (BuildContext context, ViewportOffset position) {
-          return Viewport(
-            cacheExtent: _preloadPagesCount < 1
-                ? 0
-                : (_preloadPagesCount == 1
-                    ? 1
-                    : widget.scrollDirection == Axis.horizontal
-                        ? MediaQuery.of(context).size.width *
-                                _preloadPagesCount - 1
-                        : MediaQuery.of(context).size.height *
-                                _preloadPagesCount - 1),
-            axisDirection: axisDirection,
-            offset: position,
-            slivers: <Widget>[
-              SliverFillViewport(
-                  viewportFraction: widget.controller.viewportFraction,
-                  delegate: widget.childrenDelegate),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  @override
-  void debugFillProperties(DiagnosticPropertiesBuilder description) {
-    super.debugFillProperties(description);
-    description
-        .add(EnumProperty<Axis>('scrollDirection', widget.scrollDirection));
-    description.add(
-        FlagProperty('reverse', value: widget.reverse, ifTrue: 'reversed'));
-    description.add(DiagnosticsProperty<PreloadPageController>(
-        'controller', widget.controller,
-        showName: false));
-    description.add(DiagnosticsProperty<ScrollPhysics>(
-        'physics', widget.physics,
-        showName: false));
-    description.add(FlagProperty('pageSnapping',
-        value: widget.pageSnapping, ifFalse: 'snapping disabled'));
-  }
-}
+  /// The physics can potentially depend on the platform. For example, on
+  /// Android, the page view would typically overscroll and then bounce back
+  /// at the end of the scroll. On iOS, the page view would stop clampi
